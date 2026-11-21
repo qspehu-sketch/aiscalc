@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Сколько времени вы теряете без ИИ</title>
+<style>
+:root{--ink:#0B3C49;--bg:#EAF3F1;--acc:#E8552D;--txt:#10272D;--mut:#4F666E;--line:#BFD3CE}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:17px/1.4 "Segoe UI",Roboto,Arial,sans-serif}
+main{max-width:520px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:28px;line-height:1.15;margin:6px 0 8px;color:var(--ink)}
+.lead{color:var(--mut);margin:0 0 18px}
+.task{background:#fff;border:2px solid var(--line);border-radius:14px;padding:10px 14px;margin-bottom:10px}
+.task.on{border-color:var(--ink)}
+.head{display:flex;gap:12px;align-items:center;width:100%;background:none;border:0;font:inherit;font-weight:600;text-align:left;padding:0;color:inherit;min-height:46px;cursor:pointer}
+.box{width:26px;height:26px;border-radius:7px;border:2px solid var(--ink);flex:none;display:grid;place-items:center;color:#fff;font-size:16px}
+.on .box{background:var(--ink)}
+.ctr{display:none;gap:14px;flex-wrap:wrap;margin:6px 0 4px}
+.on .ctr{display:flex}
+.st{flex:1;min-width:140px}
+.st small{display:block;color:var(--mut);font-size:13px;margin-bottom:4px}
+.st div{display:flex;align-items:center;gap:6px}
+.st button{width:44px;height:44px;border-radius:10px;border:2px solid var(--ink);background:#fff;color:var(--ink);font-size:22px;font-weight:700;cursor:pointer}
+.st b{min-width:46px;text-align:center;font-size:20px}
+.rate{display:flex;align-items:center;gap:10px;margin:16px 0}
+.rate input{width:100px;font:inherit;font-size:20px;padding:8px;border:2px solid var(--ink);border-radius:10px}
+.res{background:var(--ink);color:#fff;border-radius:18px;padding:20px}
+.res p{margin:0 0 10px;color:#CFE3DF}
+.big{font-size:44px;line-height:1;font-weight:800;color:#fff;margin:2px 0 4px}
+.big span{color:#FF8A63}
+.sub{font-size:18px;margin:0 0 6px;color:#fff}
+.go{width:100%;min-height:54px;margin-top:14px;border:0;border-radius:12px;background:var(--acc);color:#fff;font:inherit;font-weight:700;font-size:18px;cursor:pointer}
+.go:disabled{background:#6FA39B}
+.note{font-size:13px;color:#A9C6C0;margin:10px 0 0}
+.cta{display:none;margin-top:16px;background:#fff;border-radius:14px;padding:14px;color:var(--txt)}
+.cta a{color:var(--acc);font-weight:700}
+button:focus-visible,input:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+</style></head><body><main>
+<h1>Сколько времени уходит на рутину без ИИ?</h1>
+<p class="lead">Отметьте, что делаете в своём деле, и поправьте цифры под себя. Расчёт идёт только в вашем телефоне.</p>
+<div id="list"></div>
+<label class="rate">Ваш час стоит, ₽ <input id="rate" type="number" inputmode="numeric" value="500" min="0"></label>
+<section class="res" aria-live="polite">
+<p>Без ИИ на эти задачи уходит</p>
+<div class="big"><span id="base">0</span> ч/мес</div>
+<p>С нейросетью можно вернуть себе</p>
+<div class="big"><span id="saved">0</span> ч/мес</div>
+<p class="sub" id="year"></p>
+<button class="go" id="go" disabled>Добавить в счётчик зала</button>
+<p class="note">Это примерная оценка. В общий счётчик уходит одно число: часы. Без имён и ответов.</p>
+<div class="cta" id="cta">Готово, число добавлено. Шпаргалка и готовые промты ждут в моём канале в MAX. <span id="ch"></span></div>
+</section></main>
+<script>
+// Настройки. DB: адрес Firebase Realtime Database без слэша на конце. Пусто = счётчик зала выключен.
+const DB="";
+const CHANNEL=""; // ссылка на канал в MAX, если нужна
+const ROOM=new URLSearchParams(location.search).get("room")||"luch";
+// [название, минут на раз, раз в неделю, доля экономии с ИИ]
+const T=[["Посты и объявления",40,3,.6],["Ответы клиентам и на отзывы",10,15,.5],["Описания товаров и услуг",30,3,.6],
+["Фото и карточки товара",60,2,.7],["Договоры и документы",60,2,.5],["Учёт продаж и таблицы",45,2,.5],["Акции, идеи, контент-план",45,1,.6]];
+const S=T.map(t=>({on:false,m:t[1],w:t[2],s:t[3]}));
+const $=id=>document.getElementById(id), W=4.33;
+function stepper(label,get,set,step,min){
+ const d=document.createElement("div");d.className="st";
+ d.innerHTML="<small>"+label+"</small><div><button type='button' aria-label='меньше'>−</button><b></b><button type='button' aria-label='больше'>+</button></div>";
+ const b=d.querySelector("b"),[m,p]=d.querySelectorAll("button");
+ const show=()=>b.textContent=get();show();
+ m.onclick=()=>{set(Math.max(min,get()-step));show();calc()};
+ p.onclick=()=>{set(get()+step);show();calc()};
+ return d}
+T.forEach((t,i)=>{
+ const el=document.createElement("div");el.className="task";
+ const h=document.createElement("button");h.type="button";h.className="head";
+ h.innerHTML="<span class='box'></span><span>"+t[0]+"</span>";
+ const c=document.createElement("div");c.className="ctr";
+ c.append(stepper("раз в неделю",()=>S[i].w,v=>S[i].w=v,1,0),stepper("минут на раз",()=>S[i].m,v=>S[i].m=v,5,5));
+ h.onclick=()=>{S[i].on=!S[i].on;el.classList.toggle("on",S[i].on);h.querySelector(".box").textContent=S[i].on?"✓":"";calc()};
+ el.append(h,c);$("list").append(el)});
+let saved=0,sent=false;
+function calc(){
+ let b=0,s=0;S.forEach(x=>{if(x.on){const h=x.m*x.w*W/60;b+=h;s+=h*x.s}});
+ saved=Math.round(s);$("base").textContent=Math.round(b);$("saved").textContent=saved;
+ const rate=+$("rate").value||0;
+ $("year").textContent=saved?"За год это "+Math.round(saved*12/8)+" рабочих дней и около "+Math.round(saved*12*rate).toLocaleString("ru-RU")+" ₽":"";
+ $("go").disabled=sent||!saved}
+$("rate").oninput=calc;
+$("go").onclick=async()=>{
+ sent=true;$("go").disabled=true;$("go").textContent="Добавлено ✓";$("cta").style.display="block";
+ if(CHANNEL)$("ch").innerHTML="<a href='"+CHANNEL+"'>Открыть канал</a>";
+ try{localStorage.setItem("aiscalc-sent-"+ROOM,"1")}catch(e){}
+ if(!DB)return;
+ try{await fetch(DB+"/rooms/"+ROOM+"/results.json",{method:"POST",body:JSON.stringify({h:saved,t:Date.now()})})}catch(e){}};
+try{if(localStorage.getItem("aiscalc-sent-"+ROOM)){sent=true;$("go").textContent="Уже добавлено ✓"}}catch(e){}
+calc();
+</script></body></html>

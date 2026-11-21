@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Счётчик зала</title>
+<style>
+:root{--ink:#0B3C49;--acc:#FF8A63}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--ink);color:#fff;font:24px/1.3 "Segoe UI",Roboto,Arial,sans-serif;display:flex;flex-direction:column;padding:3vw}
+h1{font-size:clamp(28px,4vw,56px);margin:0;font-weight:700}
+.main{flex:1;display:flex;flex-direction:column;justify-content:center}
+.num{font-size:clamp(96px,22vw,320px);line-height:.95;font-weight:800;color:var(--acc);font-variant-numeric:tabular-nums}
+.unit{font-size:clamp(28px,4vw,60px);margin:0 0 3vw}
+.row{display:flex;gap:6vw;flex-wrap:wrap}
+.row b{display:block;font-size:clamp(40px,7vw,110px);line-height:1}
+.row span{font-size:clamp(20px,2.4vw,36px);color:#BFD8D3}
+.tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:16px;color:#9FC0BA;opacity:.55;transition:opacity .2s}
+.tools:hover,.tools:focus-within{opacity:1}
+.tools input{width:90px;font:inherit;padding:6px;border-radius:8px;border:1px solid #6FA39B;background:#08303A;color:#fff}
+.tools button{font:inherit;padding:6px 12px;border-radius:8px;border:1px solid #6FA39B;background:transparent;color:#fff;cursor:pointer}
+.dot{width:12px;height:12px;border-radius:50%;background:#777;display:inline-block}
+.dot.ok{background:#4ADE80}
+</style></head><body>
+<h1>Сколько времени зал вернул бы себе с нейросетью</h1>
+<div class="main">
+<div class="num" id="total">0</div>
+<p class="unit">часов в месяц на всех</p>
+<div class="row">
+<div><b id="people">0</b><span>человек посчитали</span></div>
+<div><b id="avg">0</b><span>часов в среднем у одного</span></div>
+<div><b id="days">0</b><span>рабочих дней в год на всех</span></div>
+</div></div>
+<div class="tools">
+<span class="dot" id="dot"></span><span id="st">нет связи, ручной режим</span>
+<input id="m" type="number" inputmode="numeric" placeholder="часов">
+<button id="add">Добавить человека</button>
+<button id="reset">Сбросить</button>
+</div>
+<script>
+// Те же настройки, что в index.html
+const DB="";
+const ROOM=new URLSearchParams(location.search).get("room")||"luch";
+const $=id=>document.getElementById(id);
+let remote={h:0,n:0},man={h:0,n:0};
+function draw(){
+ const h=remote.h+man.h,n=remote.n+man.n;
+ $("total").textContent=Math.round(h).toLocaleString("ru-RU");
+ $("people").textContent=n;$("avg").textContent=n?Math.round(h/n):0;
+ $("days").textContent=Math.round(h*12/8).toLocaleString("ru-RU")}
+async function poll(){
+ if(!DB)return;
+ try{
+  const r=await fetch(DB+"/rooms/"+ROOM+"/results.json",{cache:"no-store"});
+  const d=await r.json();let h=0,n=0;
+  if(d)Object.values(d).forEach(x=>{const v=+x.h;if(v>=0&&v<=500){h+=v;n++}});
+  remote={h,n};$("dot").classList.add("ok");$("st").textContent="связь есть";draw();
+ }catch(e){$("dot").classList.remove("ok");$("st").textContent="нет связи, ручной режим"}}
+$("add").onclick=()=>{const v=+$("m").value;if(v>0&&v<=500){man.h+=v;man.n++;$("m").value="";draw()}};
+$("reset").onclick=async()=>{
+ if(!confirm("Обнулить счётчик этого зала?"))return;
+ man={h:0,n:0};remote={h:0,n:0};draw();
+ if(DB){try{await fetch(DB+"/rooms/"+ROOM+".json",{method:"DELETE"})}catch(e){}}};
+draw();poll();setInterval(poll,3000);
+</script></body></html>
