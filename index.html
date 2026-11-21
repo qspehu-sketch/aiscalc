@@ -46,7 +46,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--acc);outline-of
 <div class="big"><span id="saved">0</span> ч/мес</div>
 <p class="sub" id="year"></p>
 <button class="go" id="go" disabled>Добавить в счётчик зала</button>
-<p class="note">Это примерная оценка. В общий счётчик уходит одно число: часы. Без имён и ответов.</p>
+<p class="note">Это примерная оценка. В общий счётчик уходит одно число: часы. Без имён и ответов. Без имён и ответов.</p>
 <div class="cta" id="cta">Готово, число добавлено. Шпаргалка и готовые промты ждут в моём канале в MAX. <span id="ch"></span></div>
 </section></main>
 <script>
@@ -72,13 +72,13 @@ T.forEach((t,i)=>{
  const h=document.createElement("button");h.type="button";h.className="head";
  h.innerHTML="<span class='box'></span><span>"+t[0]+"</span>";
  const c=document.createElement("div");c.className="ctr";
- c.append(stepper("раз в неделю",()=>S[i].w,v=>S[i].w=v,1,0),stepper("минут на раз",()=>S[i].m,v=>S[i].m=v,5,5));
+ c.append(stepper("раз в неделю",()=>S[i].w,v=>S[i].w=v,1,0),stepper("минут на раз",()=>S[i].m,v=>S[i].m=v,5,0));
  h.onclick=()=>{S[i].on=!S[i].on;el.classList.toggle("on",S[i].on);h.querySelector(".box").textContent=S[i].on?"✓":"";calc()};
  el.append(h,c);$("list").append(el)});
-let saved=0,sent=false;
+let saved=0,base=0,sent=false;
 function calc(){
  let b=0,s=0;S.forEach(x=>{if(x.on){const h=x.m*x.w*W/60;b+=h;s+=h*x.s}});
- saved=Math.round(s);$("base").textContent=Math.round(b);$("saved").textContent=saved;
+ saved=Math.round(s);base=Math.round(b);$("base").textContent=Math.round(b);$("saved").textContent=saved;
  const rate=+$("rate").value||0;
  $("year").textContent=saved?"За год это "+Math.round(saved*12/8)+" рабочих дней и около "+Math.round(saved*12*rate).toLocaleString("ru-RU")+" ₽":"";
  $("go").disabled=sent||!saved}
@@ -88,7 +88,7 @@ $("go").onclick=async()=>{
  if(CHANNEL)$("ch").innerHTML="<a href='"+CHANNEL+"'>Открыть канал</a>";
  try{localStorage.setItem("aiscalc-sent-"+ROOM,"1")}catch(e){}
  if(!DB)return;
- try{await fetch(DB+"/rooms/"+ROOM+"/results.json",{method:"POST",body:JSON.stringify({h:saved,t:Date.now()})})}catch(e){}};
+ try{await fetch(DB+"/rooms/"+ROOM+"/results.json",{method:"POST",body:JSON.stringify({h:saved,b:base,r:Math.max(0,Math.min(100000,+$("rate").value||0)),t:Date.now()})})}catch(e){}};
 try{if(localStorage.getItem("aiscalc-sent-"+ROOM)){sent=true;$("go").textContent="Уже добавлено ✓"}}catch(e){}
 calc();
 </script></body></html>

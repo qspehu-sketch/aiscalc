@@ -3,62 +3,75 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Счётчик зала</title>
 <style>
-:root{--ink:#0B3C49;--acc:#FF8A63}
+:root{--ink:#0B3C49;--mint:#EAF3F1;--acc:#E8552D;--hot:#FF8A63}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
-body{background:var(--ink);color:#fff;font:24px/1.3 "Segoe UI",Roboto,Arial,sans-serif;display:flex;flex-direction:column;padding:3vw}
-h1{font-size:clamp(28px,4vw,56px);margin:0;font-weight:700}
-.main{flex:1;display:flex;flex-direction:column;justify-content:center}
-.num{font-size:clamp(96px,22vw,320px);line-height:.95;font-weight:800;color:var(--acc);font-variant-numeric:tabular-nums}
-.unit{font-size:clamp(28px,4vw,60px);margin:0 0 3vw}
-.row{display:flex;gap:6vw;flex-wrap:wrap}
-.row b{display:block;font-size:clamp(40px,7vw,110px);line-height:1}
-.row span{font-size:clamp(20px,2.4vw,36px);color:#BFD8D3}
-.tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:16px;color:#9FC0BA;opacity:.55;transition:opacity .2s}
+body{display:flex;flex-direction:column;font:24px/1.25 "Segoe UI",Roboto,Arial,sans-serif;background:var(--ink);color:#fff}
+.split{flex:1;display:flex;min-height:0}
+.side{flex:1;display:flex;flex-direction:column;justify-content:center;padding:2vw 3vw}
+.left{background:var(--ink);color:#fff}
+.right{background:var(--mint);color:var(--ink)}
+.tag{font-size:clamp(26px,3.6vw,56px);font-weight:700;margin:0 0 1.2vw}
+.num{font-size:clamp(60px,9.5vw,180px);line-height:1;font-weight:800;font-variant-numeric:tabular-nums}
+.num.m{font-size:clamp(48px,7.2vw,140px);margin-top:1.6vw}
+.left .num{color:var(--hot)}
+.right .num{color:var(--ink)}
+.unit{font-size:clamp(18px,2.2vw,36px);margin:.4vw 0 0}
+.left .unit{color:#CFE3DF}
+.bar{background:var(--acc);color:#fff;padding:1.2vw 3vw;display:flex;gap:1.2vw;align-items:baseline;justify-content:center}
+.bar b{font-size:clamp(34px,5vw,80px)}
+.bar span{font-size:clamp(20px,2.6vw,42px)}
+.tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 3vw;font-size:15px;color:#9FC0BA;background:var(--ink);opacity:.55;transition:opacity .2s}
 .tools:hover,.tools:focus-within{opacity:1}
-.tools input{width:90px;font:inherit;padding:6px;border-radius:8px;border:1px solid #6FA39B;background:#08303A;color:#fff}
+.tools input{width:104px;font:inherit;padding:6px;border-radius:8px;border:1px solid #6FA39B;background:#08303A;color:#fff}
 .tools button{font:inherit;padding:6px 12px;border-radius:8px;border:1px solid #6FA39B;background:transparent;color:#fff;cursor:pointer}
 .dot{width:12px;height:12px;border-radius:50%;background:#777;display:inline-block}
 .dot.ok{background:#4ADE80}
 </style></head><body>
-<h1>Сколько времени зал вернул бы себе с нейросетью</h1>
-<div class="main">
-<div class="num" id="total">0</div>
-<p class="unit">часов в месяц на всех</p>
-<div class="row">
-<div><b id="people">0</b><span>человек посчитали</span></div>
-<div><b id="avg">0</b><span>часов в среднем у одного</span></div>
-<div><b id="days">0</b><span>рабочих дней в год на всех</span></div>
-</div></div>
+<div class="split">
+ <section class="side left"><p class="tag">Без ИИ уходит</p>
+  <div class="num" id="wh">0</div><p class="unit">часов в месяц</p>
+  <div class="num m" id="wm">0</div><p class="unit">рублей в месяц</p></section>
+ <section class="side right"><p class="tag">С ИИ сэкономите</p>
+  <div class="num" id="sh">0</div><p class="unit">часов в месяц</p>
+  <div class="num m" id="sm">0</div><p class="unit">рублей в месяц</p></section>
+</div>
+<div class="bar"><b id="people">0</b><span>человек заполнили</span></div>
 <div class="tools">
-<span class="dot" id="dot"></span><span id="st">нет связи, ручной режим</span>
-<input id="m" type="number" inputmode="numeric" placeholder="часов">
-<button id="add">Добавить человека</button>
-<button id="reset">Сбросить</button>
+ <span class="dot" id="dot"></span><span id="st">нет связи, ручной режим</span>
+ <input id="mb" type="number" inputmode="numeric" placeholder="без ИИ, ч">
+ <input id="ms" type="number" inputmode="numeric" placeholder="сэкономят, ч">
+ <input id="mr" type="number" inputmode="numeric" placeholder="₽ за час">
+ <button id="add">Добавить человека</button>
+ <button id="reset">Сбросить</button>
 </div>
 <script>
-// Те же настройки, что в index.html
+// Адрес базы Firebase, тот же, что в index.html
 const DB="https://aiscalc-default-rtdb.firebaseio.com";
 const ROOM=new URLSearchParams(location.search).get("room")||"luch";
-const $=id=>document.getElementById(id);
-let remote={h:0,n:0},man={h:0,n:0};
+const $=id=>document.getElementById(id), fmt=n=>Math.round(n).toLocaleString("ru-RU");
+const Z=()=>({b:0,s:0,bm:0,sm:0,n:0});
+let remote=Z(),man=Z();
 function draw(){
- const h=remote.h+man.h,n=remote.n+man.n;
- $("total").textContent=Math.round(h).toLocaleString("ru-RU");
- $("people").textContent=n;$("avg").textContent=n?Math.round(h/n):0;
- $("days").textContent=Math.round(h*12/8).toLocaleString("ru-RU")}
+ const b=remote.b+man.b,s=remote.s+man.s,bm=remote.bm+man.bm,sm=remote.sm+man.sm,n=remote.n+man.n;
+ $("wh").textContent=fmt(b);$("wm").textContent=fmt(bm);
+ $("sh").textContent=fmt(s);$("sm").textContent=fmt(sm);$("people").textContent=n}
 async function poll(){
  if(!DB)return;
  try{
   const r=await fetch(DB+"/rooms/"+ROOM+"/results.json",{cache:"no-store"});
-  const d=await r.json();let h=0,n=0;
-  if(d)Object.values(d).forEach(x=>{const v=+x.h;if(v>=0&&v<=500){h+=v;n++}});
-  remote={h,n};$("dot").classList.add("ok");$("st").textContent="связь есть";draw();
+  const d=await r.json();const t=Z();
+  if(d)Object.values(d).forEach(x=>{
+   const h=+x.h,b=+(x.b!==undefined?x.b:x.h),rate=+x.r||0;
+   if(h>=0&&h<=500&&b>=h&&b<=1000&&rate>=0&&rate<=100000){t.s+=h;t.b+=b;t.sm+=h*rate;t.bm+=b*rate;t.n++}});
+  remote=t;$("dot").classList.add("ok");$("st").textContent="связь есть";draw();
  }catch(e){$("dot").classList.remove("ok");$("st").textContent="нет связи, ручной режим"}}
-$("add").onclick=()=>{const v=+$("m").value;if(v>0&&v<=500){man.h+=v;man.n++;$("m").value="";draw()}};
+$("add").onclick=()=>{const b=+$("mb").value,s=+$("ms").value,r=+$("mr").value||0;
+ if(b>0&&b<=1000&&s>=0&&s<=b&&r>=0&&r<=100000){man.b+=b;man.s+=s;man.bm+=b*r;man.sm+=s*r;man.n++;
+  $("mb").value="";$("ms").value="";$("mr").value="";draw()}};
 $("reset").onclick=async()=>{
  if(!confirm("Обнулить счётчик этого зала?"))return;
- man={h:0,n:0};remote={h:0,n:0};draw();
+ man=Z();remote=Z();draw();
  if(DB){try{await fetch(DB+"/rooms/"+ROOM+".json",{method:"DELETE"})}catch(e){}}};
 draw();poll();setInterval(poll,3000);
 </script></body></html>
