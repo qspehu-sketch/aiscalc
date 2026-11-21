@@ -51,7 +51,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--acc);outline-of
 </section></main>
 <script>
 // Настройки. DB: адрес Firebase Realtime Database без слэша на конце. Пусто = счётчик зала выключен.
-const DB="";
+const DB="https://aiscalc-default-rtdb.firebaseio.com";
 const CHANNEL=""; // ссылка на канал в MAX, если нужна
 const ROOM=new URLSearchParams(location.search).get("room")||"luch";
 // [название, минут на раз, раз в неделю, доля экономии с ИИ]
