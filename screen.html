@@ -38,7 +38,7 @@ h1{font-size:clamp(28px,4vw,56px);margin:0;font-weight:700}
 </div>
 <script>
 // Те же настройки, что в index.html
-const DB="";
+const DB="https://aiscalc-default-rtdb.firebaseio.com";
 const ROOM=new URLSearchParams(location.search).get("room")||"luch";
 const $=id=>document.getElementById(id);
 let remote={h:0,n:0},man={h:0,n:0};
